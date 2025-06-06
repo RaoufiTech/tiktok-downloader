@@ -1,34 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-
-interface VideoMetadata {
-  title: string
-  author: string
-  duration: number
-  thumbnail: string
-}
+import { useReducer } from 'react'
+import { appReducer, initialState } from '@/lib/appReducer'
 
 export default function Home() {
-  const [url, setUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [downloading, setDownloading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [downloadUrl, setDownloadUrl] = useState('')
-  const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
+  const [state, dispatch] = useReducer(appReducer, initialState)
 
   const handleDownload = async () => {
-    if (!url.trim()) {
-      setMessage('Please enter a TikTok URL')
+    if (!state.url.trim()) {
+      dispatch({ type: 'SET_MESSAGE', payload: 'Please enter a TikTok URL' })
       return
     }
 
-    setLoading(true)
-    setMessage('')
-    setDownloadUrl('')
-    setVideoMetadata(null)
-    setShowPreview(false)
+    dispatch({ type: 'SET_LOADING', payload: true })
+    dispatch({ type: 'RESET_DOWNLOAD_STATE' })
 
     try {
       const response = await fetch('/api/download', {
@@ -36,35 +21,44 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: state.url }),
       })
 
       const data = await response.json()
 
       if (data.success) {
-        setMessage('Video processed successfully!')
-        setDownloadUrl(data.downloadUrl)
-        setVideoMetadata(data.metadata)
-        setShowPreview(true)
+        dispatch({
+          type: 'SET_DOWNLOAD_SUCCESS',
+          payload: {
+            downloadUrl: data.downloadUrl,
+            metadata: data.metadata,
+          },
+        })
       } else {
-        setMessage(data.error || 'Failed to download video')
+        dispatch({
+          type: 'SET_MESSAGE',
+          payload: data.error || 'Failed to download video',
+        })
       }
     } catch (err) {
       console.error('Download error:', err)
-      setMessage('An error occurred while processing the video')
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: 'An error occurred while processing the video',
+      })
     } finally {
-      setLoading(false)
+      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
 
   const handleDownloadClick = async () => {
-    if (!downloadUrl) return
+    if (!state.downloadUrl) return
 
-    setDownloading(true)
+    dispatch({ type: 'SET_DOWNLOADING', payload: true })
 
     try {
       // Fetch the video file with progress indication
-      const response = await fetch(downloadUrl)
+      const response = await fetch(state.downloadUrl)
 
       if (!response.ok) {
         throw new Error('Failed to download video')
@@ -87,17 +81,23 @@ export default function Home() {
       // Clean up the blob URL
       URL.revokeObjectURL(blobUrl)
 
-      setMessage('Video downloaded successfully! 🎉')
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: 'Video downloaded successfully! 🎉',
+      })
     } catch (error) {
       console.error('Download failed:', error)
-      setMessage('Failed to download video file')
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: 'Failed to download video file',
+      })
     } finally {
-      setDownloading(false)
+      dispatch({ type: 'SET_DOWNLOADING', payload: false })
     }
   }
 
   const togglePreview = () => {
-    setShowPreview(!showPreview)
+    dispatch({ type: 'TOGGLE_PREVIEW' })
   }
 
   return (
@@ -128,18 +128,20 @@ export default function Home() {
             <input
               type='text'
               placeholder='Paste TikTok URL here...'
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              value={state.url}
+              onChange={(e) =>
+                dispatch({ type: 'SET_URL', payload: e.target.value })
+              }
               className='w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent'
             />
           </div>
 
           <button
             onClick={handleDownload}
-            disabled={loading || downloading}
+            disabled={state.loading || state.downloading}
             className='w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center'
           >
-            {loading ? (
+            {state.loading ? (
               <>
                 <svg
                   className='animate-spin -ml-1 mr-3 h-5 w-5 text-white'
@@ -168,24 +170,25 @@ export default function Home() {
             )}
           </button>
 
-          {message && (
+          {state.message && (
             <div
               className={`p-3 rounded-xl text-center transition-all duration-300 ${
-                message.includes('success') || message.includes('🎉')
+                state.message.includes('success') ||
+                state.message.includes('🎉')
                   ? 'bg-green-500/20 text-green-300 border border-green-500/30'
                   : 'bg-red-500/20 text-red-300 border border-red-500/30'
               }`}
             >
-              {message}
+              {state.message}
             </div>
           )}
 
-          {videoMetadata && (
+          {state.videoMetadata && (
             <div className='p-4 bg-white/10 rounded-xl border border-white/20 space-y-4'>
               <div className='flex items-start space-x-3'>
-                {videoMetadata.thumbnail && (
+                {state.videoMetadata.thumbnail && (
                   <img
-                    src={videoMetadata.thumbnail}
+                    src={state.videoMetadata.thumbnail}
                     alt='Video thumbnail'
                     className='w-16 h-16 rounded-lg object-cover'
                     onError={(e) => {
@@ -195,15 +198,15 @@ export default function Home() {
                 )}
                 <div className='flex-1 min-w-0'>
                   <h3 className='text-white font-medium text-sm truncate'>
-                    {videoMetadata.title}
+                    {state.videoMetadata.title}
                   </h3>
                   <p className='text-white/70 text-xs mt-1'>
-                    by {videoMetadata.author}
+                    by {state.videoMetadata.author}
                   </p>
-                  {videoMetadata.duration > 0 && (
+                  {state.videoMetadata.duration > 0 && (
                     <p className='text-white/50 text-xs mt-1'>
-                      {Math.floor(videoMetadata.duration / 60)}:
-                      {(videoMetadata.duration % 60)
+                      {Math.floor(state.videoMetadata.duration / 60)}:
+                      {(state.videoMetadata.duration % 60)
                         .toString()
                         .padStart(2, '0')}
                     </p>
@@ -216,23 +219,29 @@ export default function Home() {
                 onClick={togglePreview}
                 className='w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center'
               >
-                {showPreview ? <>👁️ Hide Preview</> : <>👀 Show Preview</>}
+                {state.showPreview ? (
+                  <>👁️ Hide Preview</>
+                ) : (
+                  <>👀 Show Preview</>
+                )}
               </button>
 
               {/* Video Preview */}
-              {showPreview && downloadUrl && (
+              {state.showPreview && state.downloadUrl && (
                 <div className='space-y-3'>
                   <div className='bg-black/50 rounded-lg overflow-hidden'>
                     <video
-                      src={downloadUrl}
+                      src={state.downloadUrl}
                       controls
                       className='w-full h-auto max-h-64 object-contain'
                       preload='metadata'
                       onError={(e) => {
                         console.error('Video preview error:', e)
-                        setMessage(
-                          'Preview unavailable, but download should work'
-                        )
+                        dispatch({
+                          type: 'SET_MESSAGE',
+                          payload:
+                            'Preview unavailable, but download should work',
+                        })
                       }}
                     >
                       Your browser does not support the video tag.
@@ -246,14 +255,14 @@ export default function Home() {
             </div>
           )}
 
-          {downloadUrl && (
+          {state.downloadUrl && (
             <div className='p-4 bg-white/10 rounded-xl border border-white/20'>
               <button
                 onClick={handleDownloadClick}
-                disabled={downloading}
-                className='block w-full py-3 px-4 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-center transition-all duration-200 flex items-center justify-center'
+                disabled={state.downloading}
+                className='w-full py-3 px-4 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-center transition-all duration-200 flex items-center justify-center'
               >
-                {downloading ? (
+                {state.downloading ? (
                   <>
                     <svg
                       className='animate-spin -ml-1 mr-3 h-4 w-4 text-white'
@@ -282,7 +291,7 @@ export default function Home() {
                 )}
               </button>
               <p className='text-white/50 text-xs text-center mt-2'>
-                {downloading
+                {state.downloading
                   ? 'Please wait while we prepare your download...'
                   : 'Click to download the video without watermarks'}
               </p>

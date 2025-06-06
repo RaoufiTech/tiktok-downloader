@@ -8,6 +8,7 @@ export function validateUrl(url: string): boolean {
     /^(https?:\/\/)?(www\.)?tiktok\.com\/@[\w.-]+\/video\/\d+/,
     /^(https?:\/\/)?(www\.)?tiktok\.com\/[\w.-]+\/video\/\d+/,
     /^(https?:\/\/)?vm\.tiktok\.com\/[\w\d]+/,
+    /^(https?:\/\/)?vt\.tiktok\.com\/[\w\d]+/,
     /^(https?:\/\/)?m\.tiktok\.com\/v\/\d+/,
     /^(https?:\/\/)?(www\.)?tiktok\.com\/t\/[\w\d]+/,
   ]
@@ -20,6 +21,7 @@ export function parseVideoId(url: string): string | null {
     /\/video\/(\d+)/,
     /\/v\/(\d+)/,
     /vm\.tiktok\.com\/([\w\d]+)/,
+    /vt\.tiktok\.com\/([\w\d]+)/,
     /\/t\/([\w\d]+)/,
   ]
 

@@ -305,7 +305,7 @@ export default function Home() {
               />
             </div>
             {/* Download Type Selection */}
-            <div className='flex space-x-2'>
+            {/* <div className='flex space-x-2'>
               <button
                 onClick={() =>
                   dispatch({ type: 'SET_DOWNLOAD_TYPE', payload: 'video' })
@@ -330,7 +330,7 @@ export default function Home() {
               >
                 🎵 MP3
               </button>
-            </div>{' '}
+            </div>{' '} */}
             <button
               onClick={handleProcess}
               disabled={

@@ -50,6 +50,11 @@ export async function POST(request: NextRequest) {
         author: videoData.author,
         duration: videoData.duration,
         thumbnail: videoData.thumbnail,
+        images:
+          videoData.images?.map((img) => ({
+            ...img,
+            selected: false,
+          })) || [],
       },
     })
   } catch (error) {

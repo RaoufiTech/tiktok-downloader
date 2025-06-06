@@ -93,7 +93,6 @@ export default function Home() {
       dispatch({ type: 'SET_DOWNLOADING', payload: false })
     }
   }
-
   const handleAudioDownload = async () => {
     if (!state.audioUrl) return
 
@@ -132,6 +131,135 @@ export default function Home() {
       dispatch({ type: 'SET_DOWNLOADING_AUDIO', payload: false })
     }
   }
+  const handleImageDownload = async () => {
+    if (!state.videoMetadata?.images) return
+
+    const selectedImages = state.videoMetadata.images.filter(
+      (img) => img.selected
+    )
+
+    if (selectedImages.length === 0) {
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: 'Please select at least one image to download',
+      })
+      return
+    }
+
+    dispatch({ type: 'SET_DOWNLOADING_IMAGES', payload: true })
+
+    try {
+      const imageUrls = selectedImages.map((img) => img.url)
+
+      // Only create ZIP if user explicitly chose it
+      if (state.downloadImagesAsZip) {
+        const response = await fetch('/api/images', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageUrls,
+            title: state.videoMetadata.title,
+            asZip: true,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to download images as ZIP')
+        }
+
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = `tiktok-images-${Date.now()}.zip`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        URL.revokeObjectURL(blobUrl)
+
+        dispatch({
+          type: 'SET_MESSAGE',
+          payload: `${selectedImages.length} image(s) downloaded as ZIP! 🗜️`,
+        })
+      } else {
+        // Always download images individually (regardless of count)
+        const response = await fetch('/api/images', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageUrls,
+            asZip: false,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to get image download URLs')
+        }
+
+        const data = await response.json()
+
+        if (!data.success || !data.images) {
+          throw new Error('Invalid response from server')
+        }
+
+        // Download each image individually
+        for (const imageData of data.images) {
+          try {
+            const imageResponse = await fetch(imageData.url)
+            if (!imageResponse.ok) continue
+
+            const blob = await imageResponse.blob()
+            const blobUrl = URL.createObjectURL(blob)
+
+            const link = document.createElement('a')
+            link.href = blobUrl
+            link.download = imageData.filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            URL.revokeObjectURL(blobUrl)
+
+            // Small delay between downloads
+            await new Promise((resolve) => setTimeout(resolve, 500))
+          } catch (error) {
+            console.error('Failed to download individual image:', error)
+          }
+        }
+
+        dispatch({
+          type: 'SET_MESSAGE',
+          payload: `${selectedImages.length} image(s) downloaded individually! 🖼️`,
+        })
+      }
+    } catch (error) {
+      console.error('Image download failed:', error)
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: 'Failed to download images',
+      })
+    } finally {
+      dispatch({ type: 'SET_DOWNLOADING_IMAGES', payload: false })
+    }
+  }
+
+  const toggleImageGallery = () => {
+    dispatch({ type: 'TOGGLE_IMAGE_GALLERY' })
+  }
+
+  const toggleImageSelection = (imageId: string) => {
+    dispatch({ type: 'TOGGLE_IMAGE_SELECTION', payload: imageId })
+  }
+
+  const selectAllImages = (selected: boolean) => {
+    dispatch({ type: 'SELECT_ALL_IMAGES', payload: selected })
+  }
 
   const togglePreview = () => {
     dispatch({ type: 'TOGGLE_PREVIEW' })
@@ -155,9 +283,10 @@ export default function Home() {
           </div>
           <h1 className='text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2'>
             TikTok Downloader
-          </h1>
+          </h1>{' '}
           <p className='text-sm md:text-base text-white/70'>
-            Download TikTok videos without watermarks or extract MP3 audio
+            Download TikTok videos without watermarks, extract MP3 audio, or
+            save images from photo carousels
           </p>
         </div>
 
@@ -175,7 +304,6 @@ export default function Home() {
                 className='w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm md:text-base'
               />
             </div>
-
             {/* Download Type Selection */}
             <div className='flex space-x-2'>
               <button
@@ -202,12 +330,14 @@ export default function Home() {
               >
                 🎵 MP3
               </button>
-            </div>
-
+            </div>{' '}
             <button
               onClick={handleProcess}
               disabled={
-                state.loading || state.downloading || state.downloadingAudio
+                state.loading ||
+                state.downloading ||
+                state.downloadingAudio ||
+                state.downloadingImages
               }
               className='w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center text-sm md:text-base'
             >
@@ -243,18 +373,19 @@ export default function Home() {
                 </>
               )}
             </button>
-
             {/* Features List */}
             <div className='bg-white/5 rounded-xl p-4 mt-6'>
               <h3 className='text-white font-semibold mb-3 text-sm md:text-base'>
                 ✨ Features
-              </h3>
+              </h3>{' '}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-2 text-xs md:text-sm text-white/70'>
                 <p>✅ Watermark-free downloads</p>
                 <p>✅ HD quality preservation</p>
                 <p>✅ MP3 audio extraction</p>
                 <p>✅ Video preview</p>
+                <p>✅ Image gallery downloads</p>
                 <p>✅ Multiple URL formats</p>
+                <p>✅ Batch image selection</p>
                 <p>✅ Fast processing</p>
               </div>
             </div>
@@ -306,7 +437,6 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-
                 {/* Preview Toggle */}
                 {state.downloadUrl && (
                   <button
@@ -315,8 +445,7 @@ export default function Home() {
                   >
                     {state.showPreview ? '👁️ Hide Preview' : '👀 Show Preview'}
                   </button>
-                )}
-
+                )}{' '}
                 {/* Video Preview */}
                 {state.showPreview && state.downloadUrl && (
                   <div className='space-y-3'>
@@ -343,14 +472,203 @@ export default function Home() {
                     </p>
                   </div>
                 )}
+                {/* Image Gallery */}
+                {state.videoMetadata?.images &&
+                  state.videoMetadata.images.length > 0 && (
+                    <div className='space-y-3'>
+                      <button
+                        onClick={toggleImageGallery}
+                        className='w-full py-2 px-4 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center text-sm md:text-base'
+                      >
+                        {state.showImageGallery
+                          ? '🖼️ Hide Images'
+                          : `🖼️ Show Images (${state.videoMetadata.images.length})`}
+                      </button>
 
+                      {state.showImageGallery && (
+                        <div className='space-y-3'>
+                          {/* Select All Controls */}
+                          <div className='flex items-center justify-between bg-white/5 rounded-lg p-3'>
+                            <span className='text-white text-sm'>
+                              Select images to download:
+                            </span>
+                            <div className='flex space-x-2'>
+                              <button
+                                onClick={() => selectAllImages(true)}
+                                className='px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded'
+                              >
+                                All
+                              </button>
+                              <button
+                                onClick={() => selectAllImages(false)}
+                                className='px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded'
+                              >
+                                None
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Image Grid */}
+                          <div className='grid grid-cols-2 md:grid-cols-3 gap-3'>
+                            {state.videoMetadata.images.map((image, index) => (
+                              <div
+                                key={image.id}
+                                className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                                  image.selected
+                                    ? 'ring-2 ring-pink-500'
+                                    : 'hover:ring-2 hover:ring-white/30'
+                                }`}
+                                onClick={() => toggleImageSelection(image.id)}
+                              >
+                                <img
+                                  src={image.thumbnail}
+                                  alt={`TikTok image ${index + 1}`}
+                                  className='w-full h-24 md:h-32 object-cover'
+                                  onError={(e) => {
+                                    e.currentTarget.src =
+                                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SW1hZ2U8L3RleHQ+PC9zdmc+'
+                                  }}
+                                />
+
+                                {/* Selection Overlay */}
+                                <div
+                                  className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ${
+                                    image.selected
+                                      ? 'bg-pink-500/20'
+                                      : 'bg-black/0 hover:bg-black/20'
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                      image.selected
+                                        ? 'bg-pink-500 border-pink-500'
+                                        : 'border-white/50 hover:border-white'
+                                    }`}
+                                  >
+                                    {image.selected && (
+                                      <svg
+                                        className='w-4 h-4 text-white'
+                                        fill='currentColor'
+                                        viewBox='0 0 20 20'
+                                      >
+                                        <path
+                                          fillRule='evenodd'
+                                          d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                          clipRule='evenodd'
+                                        />
+                                      </svg>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Image Number */}
+                                <div className='absolute top-1 left-1 bg-black/50 text-white text-xs px-2 py-1 rounded'>
+                                  {index + 1}
+                                </div>
+                              </div>
+                            ))}{' '}
+                          </div>
+
+                          {/* Download Options */}
+                          <div className='bg-white/5 rounded-lg p-3 space-y-3'>
+                            <div className='flex items-center space-x-3'>
+                              <input
+                                type='checkbox'
+                                id='downloadAsZip'
+                                checked={state.downloadImagesAsZip}
+                                onChange={(e) =>
+                                  dispatch({
+                                    type: 'SET_DOWNLOAD_IMAGES_AS_ZIP',
+                                    payload: e.target.checked,
+                                  })
+                                }
+                                className='w-4 h-4 text-pink-500 bg-white/10 border-white/30 rounded focus:ring-pink-500 focus:ring-2'
+                              />
+                              <label
+                                htmlFor='downloadAsZip'
+                                className='text-white text-sm cursor-pointer'
+                              >
+                                Download as ZIP file
+                              </label>
+                            </div>
+                            <p className='text-white/60 text-xs'>
+                              {state.downloadImagesAsZip
+                                ? '🗜️ Images will be packaged into a single ZIP file'
+                                : '📸 Images will be downloaded individually'}
+                            </p>
+                          </div>
+
+                          {/* Download Selected Images Button */}
+                          <button
+                            onClick={handleImageDownload}
+                            disabled={
+                              state.downloadingImages ||
+                              !state.videoMetadata?.images?.some(
+                                (img) => img.selected
+                              )
+                            }
+                            className='w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center text-sm md:text-base gap-2'
+                          >
+                            {state.downloadingImages ? (
+                              <>
+                                <svg
+                                  className='animate-spin flex-shrink-0 h-4 w-4 text-white'
+                                  xmlns='http://www.w3.org/2000/svg'
+                                  fill='none'
+                                  viewBox='0 0 24 24'
+                                >
+                                  <circle
+                                    className='opacity-25'
+                                    cx='12'
+                                    cy='12'
+                                    r='10'
+                                    stroke='currentColor'
+                                    strokeWidth='4'
+                                  ></circle>
+                                  <path
+                                    className='opacity-75'
+                                    fill='currentColor'
+                                    d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                                  ></path>
+                                </svg>
+                                <span>Downloading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className='flex-shrink-0 h-5 w-5 text-white'
+                                  fill='none'
+                                  stroke='currentColor'
+                                  viewBox='0 0 24 24'
+                                >
+                                  <path
+                                    strokeLinecap='round'
+                                    strokeLinejoin='round'
+                                    strokeWidth={2}
+                                    d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+                                  />
+                                </svg>
+                                <span>
+                                  Download Selected (
+                                  {state.videoMetadata?.images?.filter(
+                                    (img) => img.selected
+                                  ).length || 0}
+                                  )
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}{' '}
                 {/* Download Buttons */}
                 {(state.downloadUrl || state.audioUrl) && (
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                     {state.downloadUrl && (
                       <button
                         onClick={handleVideoDownload}
-                        disabled={state.downloading}
+                        disabled={state.downloading || state.downloadingImages}
                         className='py-3 px-4 bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center text-sm md:text-base gap-2'
                       >
                         {state.downloading ? (
@@ -401,7 +719,9 @@ export default function Home() {
                     {state.audioUrl && (
                       <button
                         onClick={handleAudioDownload}
-                        disabled={state.downloadingAudio}
+                        disabled={
+                          state.downloadingAudio || state.downloadingImages
+                        }
                         className='py-3 px-4 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center text-sm md:text-base gap-2'
                       >
                         {state.downloadingAudio ? (
@@ -450,10 +770,11 @@ export default function Home() {
                     )}
                   </div>
                 )}
-
                 {(state.downloadUrl || state.audioUrl) && (
                   <p className='text-white/50 text-xs text-center'>
-                    {state.downloading || state.downloadingAudio
+                    {state.downloading ||
+                    state.downloadingAudio ||
+                    state.downloadingImages
                       ? 'Please wait while we prepare your download...'
                       : 'Click to download your content'}
                   </p>

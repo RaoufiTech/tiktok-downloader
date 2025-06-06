@@ -1,3 +1,9 @@
+export interface ImageData {
+  id: string
+  url: string
+  thumbnail: string
+}
+
 export interface VideoData {
   id: string
   title: string
@@ -7,6 +13,8 @@ export interface VideoData {
   author: string
   description: string
   downloadUrl: string
+  images?: ImageData[]
+  isPhotoCarousel?: boolean
 }
 
 export interface ProcessedVideo {

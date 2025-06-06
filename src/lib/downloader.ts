@@ -1,6 +1,6 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
-import { VideoData } from './types'
+import { VideoData, ImageData } from './types'
 import { parseVideoId } from './validator'
 
 export class Downloader {
@@ -163,6 +163,19 @@ export class Downloader {
         const data = response.data.data
         const videoId = parseVideoId(url) || 'unknown'
 
+        // Check if this is a photo carousel (slideshow)
+        const isPhotoCarousel =
+          data.images && Array.isArray(data.images) && data.images.length > 0
+
+        let images: ImageData[] = []
+        if (isPhotoCarousel) {
+          images = data.images.map((img: string, index: number) => ({
+            id: `${videoId}_img_${index}`,
+            url: img,
+            thumbnail: img,
+          }))
+        }
+
         // Get the video URL and make it absolute if it's relative
         let downloadUrl = data.hdplay || data.play || data.wmplay
 
@@ -180,6 +193,8 @@ export class Downloader {
           author: data.author?.nickname || 'Unknown',
           description: data.title || 'Downloaded via Tikwm',
           downloadUrl: downloadUrl,
+          images: images,
+          isPhotoCarousel: isPhotoCarousel,
         }
       }
     } catch {

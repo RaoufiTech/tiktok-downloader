@@ -18,9 +18,22 @@ export interface ProcessedVideo {
   watermarkRemoved: boolean
 }
 
+export interface AudioData {
+  id: string
+  url: string
+  size?: number
+  format: string
+  quality?: string
+  duration: number
+  title: string
+  author: string
+}
+
 export interface DownloadResponse {
   success: boolean
   message: string
   downloadUrl?: string
+  audioUrl?: string
   video?: ProcessedVideo
+  audio?: AudioData
 }

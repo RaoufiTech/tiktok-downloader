@@ -4,7 +4,7 @@ import { validateUrl } from '../../../lib/validator'
 
 export async function POST(request: NextRequest) {
   try {
-    const { url } = await request.json()
+    const { url, type = 'video' } = await request.json()
 
     if (!url) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Processing TikTok URL:', url)
+    console.log('Processing TikTok URL:', url, 'Type:', type)
 
     const downloader = new Downloader()
     const videoData = await downloader.downloadVideo(url)
@@ -32,14 +32,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create proxy URL for video download
-    const proxyUrl = `/api/video?url=${encodeURIComponent(
+    // Create proxy URLs for both video and audio
+    const videoProxyUrl = `/api/video?url=${encodeURIComponent(
+      videoData.downloadUrl
+    )}`
+
+    const audioProxyUrl = `/api/audio?url=${encodeURIComponent(
       videoData.downloadUrl
     )}`
 
     return NextResponse.json({
       success: true,
-      downloadUrl: proxyUrl,
+      downloadUrl: videoProxyUrl,
+      audioUrl: audioProxyUrl,
       metadata: {
         title: videoData.title,
         author: videoData.author,

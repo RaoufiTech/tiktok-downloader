@@ -367,9 +367,10 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  {state.downloadType === 'video'
+                  {/* {state.downloadType === 'video'
                     ? '📹 Process Video'
-                    : '🎵 Extract MP3'}
+                    : '🎵 Extract MP3'} */}
+                  Process TikTok URL
                 </>
               )}
             </button>

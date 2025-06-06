@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     images: [
       {
-        url: siteConfig.image,
+        url: siteConfig.ogImage,
         alt: siteConfig.name,
       },
     ],
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     site: siteConfig.twitterTag,
     images: [
       {
-        url: siteConfig.image,
+        url: siteConfig.ogImage,
         alt: siteConfig.name,
       },
     ],

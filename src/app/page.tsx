@@ -49,15 +49,16 @@ export default function Home() {
             metadata: data.metadata,
           },
         })
-        
+
         // Scroll to results section after successful processing
         setTimeout(() => {
           if (containerRef.current) {
-            const resultsSection = containerRef.current.querySelector('.results-section')
+            const resultsSection =
+              containerRef.current.querySelector('.results-section')
             if (resultsSection) {
-              resultsSection.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
+              resultsSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
               })
             }
           }
@@ -290,7 +291,7 @@ export default function Home() {
   }
   return (
     <div className='min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4'>
-      <div 
+      <div
         ref={containerRef}
         className='w-full max-w-sm md:max-w-2xl lg:max-w-4xl bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-8 shadow-2xl border border-white/20'
       >
@@ -336,7 +337,8 @@ export default function Home() {
               </span>
             </a>
           </div>
-        </div>        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'>
+        </div>{' '}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'>
           {/* Input Section */}
           <div className='space-y-4'>
             <div>
@@ -385,7 +387,7 @@ export default function Home() {
                 state.downloadingAudio ||
                 state.downloadingImages
               }
-              className='w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center text-sm md:text-base'
+              className='w-full cursor-pointer py-3 px-4 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center text-sm md:text-base'
             >
               {' '}
               {state.loading ? (
@@ -402,7 +404,7 @@ export default function Home() {
                 </>
               )}
             </button>
-            
+
             {/* Features List - Hidden on mobile, shown on desktop */}
             <div className='hidden lg:block bg-white/5 rounded-xl p-4 mt-6'>
               <h3 className='text-white font-semibold mb-3 text-sm md:text-base'>
@@ -436,7 +438,6 @@ export default function Home() {
                 {state.message}
               </div>
             )}
-
             {state.videoMetadata && (
               <div className='p-4 bg-white/10 rounded-xl border border-white/20 space-y-4'>
                 <div className='flex items-start space-x-3'>
@@ -683,7 +684,7 @@ export default function Home() {
                         disabled={
                           state.downloadingAudio || state.downloadingImages
                         }
-                        className='py-3 px-4 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center text-sm md:text-base gap-2'
+                        className='py-3 cursor-pointer px-4 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center text-sm md:text-base gap-2'
                       >
                         {' '}
                         {state.downloadingAudio ? (
@@ -711,9 +712,9 @@ export default function Home() {
                   </p>
                 )}
               </div>
-            )}          </div>
+            )}{' '}
+          </div>
         </div>
-        
         {/* Features List - Mobile only, shown at bottom */}
         <div className='lg:hidden bg-white/5 rounded-xl p-4 mt-6'>
           <h3 className='text-white font-semibold mb-3 text-sm md:text-base'>

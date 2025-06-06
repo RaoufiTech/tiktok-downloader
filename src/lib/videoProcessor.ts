@@ -38,7 +38,7 @@ export class VideoProcessor {
     return Math.round((duration / 10) * 1024 * 1024)
   }
 
-  async downloadVideoFile(url: string): Promise<Buffer> {
+  async downloadVideoFile(): Promise<Buffer> {
     // This would implement actual video file download
     // For now, return empty buffer
     return Buffer.alloc(0)

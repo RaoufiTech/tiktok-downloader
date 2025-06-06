@@ -12,9 +12,11 @@ interface VideoMetadata {
 export default function Home() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [message, setMessage] = useState('')
   const [downloadUrl, setDownloadUrl] = useState('')
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
 
   const handleDownload = async () => {
     if (!url.trim()) {
@@ -26,6 +28,7 @@ export default function Home() {
     setMessage('')
     setDownloadUrl('')
     setVideoMetadata(null)
+    setShowPreview(false)
 
     try {
       const response = await fetch('/api/download', {
@@ -42,6 +45,7 @@ export default function Home() {
         setMessage('Video processed successfully!')
         setDownloadUrl(data.downloadUrl)
         setVideoMetadata(data.metadata)
+        setShowPreview(true)
       } else {
         setMessage(data.error || 'Failed to download video')
       }
@@ -53,16 +57,47 @@ export default function Home() {
     }
   }
 
-  const handleDownloadClick = () => {
-    if (downloadUrl) {
-      // Create a temporary link to trigger download
+  const handleDownloadClick = async () => {
+    if (!downloadUrl) return
+
+    setDownloading(true)
+
+    try {
+      // Fetch the video file with progress indication
+      const response = await fetch(downloadUrl)
+
+      if (!response.ok) {
+        throw new Error('Failed to download video')
+      }
+
+      // Get the blob data
+      const blob = await response.blob()
+
+      // Create a download URL from the blob
+      const blobUrl = URL.createObjectURL(blob)
+
+      // Create and trigger download
       const link = document.createElement('a')
-      link.href = downloadUrl
+      link.href = blobUrl
       link.download = `tiktok-video-${Date.now()}.mp4`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      // Clean up the blob URL
+      URL.revokeObjectURL(blobUrl)
+
+      setMessage('Video downloaded successfully! 🎉')
+    } catch (error) {
+      console.error('Download failed:', error)
+      setMessage('Failed to download video file')
+    } finally {
+      setDownloading(false)
     }
+  }
+
+  const togglePreview = () => {
+    setShowPreview(!showPreview)
   }
 
   return (
@@ -101,7 +136,7 @@ export default function Home() {
 
           <button
             onClick={handleDownload}
-            disabled={loading}
+            disabled={loading || downloading}
             className='w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center'
           >
             {loading ? (
@@ -135,8 +170,8 @@ export default function Home() {
 
           {message && (
             <div
-              className={`p-3 rounded-xl text-center ${
-                message.includes('success')
+              className={`p-3 rounded-xl text-center transition-all duration-300 ${
+                message.includes('success') || message.includes('🎉')
                   ? 'bg-green-500/20 text-green-300 border border-green-500/30'
                   : 'bg-red-500/20 text-red-300 border border-red-500/30'
               }`}
@@ -146,8 +181,8 @@ export default function Home() {
           )}
 
           {videoMetadata && (
-            <div className='p-4 bg-white/10 rounded-xl border border-white/20'>
-              <div className='flex items-start space-x-3 mb-3'>
+            <div className='p-4 bg-white/10 rounded-xl border border-white/20 space-y-4'>
+              <div className='flex items-start space-x-3'>
                 {videoMetadata.thumbnail && (
                   <img
                     src={videoMetadata.thumbnail}
@@ -175,6 +210,39 @@ export default function Home() {
                   )}
                 </div>
               </div>
+
+              {/* Preview Toggle Button */}
+              <button
+                onClick={togglePreview}
+                className='w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center'
+              >
+                {showPreview ? <>👁️ Hide Preview</> : <>👀 Show Preview</>}
+              </button>
+
+              {/* Video Preview */}
+              {showPreview && downloadUrl && (
+                <div className='space-y-3'>
+                  <div className='bg-black/50 rounded-lg overflow-hidden'>
+                    <video
+                      src={downloadUrl}
+                      controls
+                      className='w-full h-auto max-h-64 object-contain'
+                      preload='metadata'
+                      onError={(e) => {
+                        console.error('Video preview error:', e)
+                        setMessage(
+                          'Preview unavailable, but download should work'
+                        )
+                      }}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  <p className='text-white/50 text-xs text-center'>
+                    ⚡ Preview loaded - ready to download!
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -182,12 +250,41 @@ export default function Home() {
             <div className='p-4 bg-white/10 rounded-xl border border-white/20'>
               <button
                 onClick={handleDownloadClick}
-                className='block w-full py-2 px-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg text-center transition-colors duration-200'
+                disabled={downloading}
+                className='block w-full py-3 px-4 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-center transition-all duration-200 flex items-center justify-center'
               >
-                📥 Download Video File
+                {downloading ? (
+                  <>
+                    <svg
+                      className='animate-spin -ml-1 mr-3 h-4 w-4 text-white'
+                      xmlns='http://www.w3.org/2000/svg'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                    >
+                      <circle
+                        className='opacity-25'
+                        cx='12'
+                        cy='12'
+                        r='10'
+                        stroke='currentColor'
+                        strokeWidth='4'
+                      ></circle>
+                      <path
+                        className='opacity-75'
+                        fill='currentColor'
+                        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                      ></path>
+                    </svg>
+                    Downloading...
+                  </>
+                ) : (
+                  <>📥 Download Video File</>
+                )}
               </button>
               <p className='text-white/50 text-xs text-center mt-2'>
-                Click to download the video without watermarks
+                {downloading
+                  ? 'Please wait while we prepare your download...'
+                  : 'Click to download the video without watermarks'}
               </p>
             </div>
           )}
@@ -196,6 +293,7 @@ export default function Home() {
         <div className='mt-8 text-center text-white/50 text-sm'>
           <p>✅ Watermark-free downloads</p>
           <p className='mt-1'>✅ HD quality preservation</p>
+          <p className='mt-1'>✅ Video preview before download</p>
           <p className='mt-1'>✅ Multiple TikTok URL formats supported</p>
         </div>
       </div>

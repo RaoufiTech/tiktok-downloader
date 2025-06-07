@@ -50,6 +50,9 @@ export default function Home() {
           },
         })
 
+        // Clear the input after successful processing
+        dispatch({ type: 'SET_URL', payload: '' })
+
         // Scroll to results section after successful processing
         setTimeout(() => {
           if (containerRef.current) {
@@ -91,7 +94,6 @@ export default function Home() {
       if (!response.ok) {
         throw new Error('Failed to download video')
       }
-
       const blob = await response.blob()
       const blobUrl = URL.createObjectURL(blob)
 
@@ -108,6 +110,8 @@ export default function Home() {
         type: 'SET_MESSAGE',
         payload: 'Video downloaded successfully! 🎉',
       })
+      // Clear the input after successful download
+      dispatch({ type: 'SET_URL', payload: '' })
     } catch (error) {
       console.error('Download failed:', error)
       dispatch({
@@ -129,7 +133,6 @@ export default function Home() {
       if (!response.ok) {
         throw new Error('Failed to download audio')
       }
-
       const blob = await response.blob()
       const blobUrl = URL.createObjectURL(blob)
 
@@ -146,6 +149,8 @@ export default function Home() {
         type: 'SET_MESSAGE',
         payload: 'Audio downloaded successfully! 🎵',
       })
+      // Clear the input after successful download
+      dispatch({ type: 'SET_URL', payload: '' })
     } catch (error) {
       console.error('Audio download failed:', error)
       dispatch({
@@ -193,7 +198,6 @@ export default function Home() {
         if (!response.ok) {
           throw new Error('Failed to download images as ZIP')
         }
-
         const blob = await response.blob()
         const blobUrl = URL.createObjectURL(blob)
 
@@ -210,6 +214,8 @@ export default function Home() {
           type: 'SET_MESSAGE',
           payload: `${selectedImages.length} image(s) downloaded as ZIP! 🗜️`,
         })
+        // Clear the input after successful download
+        dispatch({ type: 'SET_URL', payload: '' })
       } else {
         // Always download images individually (regardless of count)
         const response = await fetch('/api/images', {
@@ -257,11 +263,12 @@ export default function Home() {
             console.error('Failed to download individual image:', error)
           }
         }
-
         dispatch({
           type: 'SET_MESSAGE',
           payload: `${selectedImages.length} image(s) downloaded individually! 🖼️`,
         })
+        // Clear the input after successful download
+        dispatch({ type: 'SET_URL', payload: '' })
       }
     } catch (error) {
       console.error('Image download failed:', error)
@@ -285,7 +292,6 @@ export default function Home() {
   const selectAllImages = (selected: boolean) => {
     dispatch({ type: 'SELECT_ALL_IMAGES', payload: selected })
   }
-
   const togglePreview = () => {
     dispatch({ type: 'TOGGLE_PREVIEW' })
   }
@@ -293,7 +299,7 @@ export default function Home() {
     <div className='min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4'>
       <div
         ref={containerRef}
-        className='w-full max-w-sm md:max-w-2xl lg:max-w-4xl bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-8 shadow-2xl border border-white/20'
+        className='w-full max-w-sm md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-8 shadow-2xl border border-white/20'
       >
         {' '}
         {/* Header */}
@@ -338,9 +344,16 @@ export default function Home() {
             </a>
           </div>
         </div>{' '}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'>
+        <div
+          className={`grid gap-6 lg:gap-8 transition-all duration-300 ${
+            state.videoMetadata && !state.showPreview && !state.showImageGallery
+              ? 'grid-cols-1 xl:grid-cols-3'
+              : 'grid-cols-1 lg:grid-cols-2'
+          }`}
+        >
+          {' '}
           {/* Input Section */}
-          <div className='space-y-4'>
+          <div className='space-y-4 xl:col-span-1'>
             <div>
               <input
                 type='text'
@@ -403,28 +416,59 @@ export default function Home() {
                   Process TikTok URL
                 </>
               )}
-            </button>
-
+            </button>{' '}
             {/* Features List - Hidden on mobile, shown on desktop */}
-            <div className='hidden lg:block bg-white/5 rounded-xl p-4 mt-6'>
-              <h3 className='text-white font-semibold mb-3 text-sm md:text-base'>
+            <div className='hidden lg:block bg-white/5 rounded-xl p-4 mt-6 border border-white/10'>
+              <h3 className='text-white font-semibold mb-4 text-sm md:text-base flex items-center'>
                 ✨ Features
-              </h3>{' '}
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-2 text-xs md:text-sm text-white/70'>
-                <p>✅ Watermark-free downloads</p>
-                <p>✅ HD quality preservation</p>
-                <p>✅ MP3 audio extraction</p>
-                <p>✅ Video preview</p>
-                <p>✅ Image gallery downloads</p>
-                <p>✅ Multiple URL formats</p>
-                <p>✅ Batch image selection</p>
-                <p>✅ Fast processing</p>
+                <div className='ml-2 w-8 h-0.5 bg-gradient-to-r from-pink-500 to-violet-500 rounded'></div>
+              </h3>
+              <div className='grid grid-cols-1 xl:grid-cols-2 gap-3 text-xs md:text-sm'>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-green-400 rounded-full'></div>
+                  <span>Watermark-free downloads</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-blue-400 rounded-full'></div>
+                  <span>HD quality preservation</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-purple-400 rounded-full'></div>
+                  <span>MP3 audio extraction</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-pink-400 rounded-full'></div>
+                  <span>Video preview</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-yellow-400 rounded-full'></div>
+                  <span>Image gallery downloads</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-indigo-400 rounded-full'></div>
+                  <span>Multiple URL formats</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-teal-400 rounded-full'></div>
+                  <span>Batch image selection</span>
+                </div>
+                <div className='flex items-center space-x-2 text-white/70 hover:text-white/90 transition-colors'>
+                  <div className='w-2 h-2 bg-orange-400 rounded-full'></div>
+                  <span>Fast processing</span>
+                </div>
               </div>
             </div>
-          </div>
-
+          </div>{' '}
           {/* Results Section */}
-          <div className='results-section space-y-4'>
+          <div
+            className={`results-section space-y-4 ${
+              state.videoMetadata &&
+              !state.showPreview &&
+              !state.showImageGallery
+                ? 'xl:col-span-2'
+                : ''
+            }`}
+          >
             {state.message && (
               <div
                 className={`p-3 rounded-xl text-center transition-all duration-300 text-sm md:text-base ${
@@ -436,6 +480,100 @@ export default function Home() {
                 }`}
               >
                 {state.message}
+              </div>
+            )}
+            {!state.videoMetadata && !state.message && (
+              <div className='space-y-4'>
+                {/* Getting Started Card */}
+                <div className='bg-gradient-to-br from-white/5 to-white/10 rounded-xl p-6 border border-white/20'>
+                  <div className='text-center'>
+                    <div className='w-16 h-16 bg-gradient-to-r from-pink-500/20 to-violet-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-pink-500/30'>
+                      <TikTokIcon className='w-8 h-8 text-pink-400' />
+                    </div>
+                    <h3 className='text-white font-semibold text-lg mb-2'>
+                      Ready to Download?
+                    </h3>
+                    <p className='text-white/70 text-sm mb-4'>
+                      Paste any TikTok URL above to get started. We support all
+                      TikTok link formats!
+                    </p>
+                  </div>
+                </div>
+
+                {/* How it Works */}
+                <div className='bg-white/5 rounded-xl p-6 border border-white/10'>
+                  <h3 className='text-white font-semibold mb-4 flex items-center'>
+                    🚀 How it Works
+                    <div className='ml-2 w-8 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded'></div>
+                  </h3>
+                  <div className='space-y-3'>
+                    <div className='flex items-start space-x-3'>
+                      <div className='w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5'>
+                        1
+                      </div>
+                      <div>
+                        <p className='text-white text-sm font-medium'>
+                          Copy TikTok URL
+                        </p>
+                        <p className='text-white/60 text-xs'>
+                          From any TikTok video or image post
+                        </p>
+                      </div>
+                    </div>
+                    <div className='flex items-start space-x-3'>
+                      <div className='w-6 h-6 bg-violet-500 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5'>
+                        2
+                      </div>
+                      <div>
+                        <p className='text-white text-sm font-medium'>
+                          Paste & Process
+                        </p>
+                        <p className='text-white/60 text-xs'>
+                          Our servers analyze the content
+                        </p>
+                      </div>
+                    </div>
+                    <div className='flex items-start space-x-3'>
+                      <div className='w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5'>
+                        3
+                      </div>
+                      <div>
+                        <p className='text-white text-sm font-medium'>
+                          Download Content
+                        </p>
+                        <p className='text-white/60 text-xs'>
+                          Video, audio, or images - your choice!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supported Formats */}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className='bg-white/5 rounded-xl p-4 border border-white/10'>
+                    <h4 className='text-white font-medium mb-3 flex items-center'>
+                      📱 Supported Links
+                    </h4>
+                    <div className='space-y-2 text-xs text-white/70'>
+                      <p>• https://www.tiktok.com/@user/video/...</p>
+                      <p>• https://vm.tiktok.com/...</p>
+                      <p>• https://m.tiktok.com/...</p>
+                      <p>• https://tiktok.com/...</p>
+                    </div>
+                  </div>
+                  <div className='bg-white/5 rounded-xl p-4 border border-white/10'>
+                    <h4 className='text-white font-medium mb-3 flex items-center'>
+                      📊 Download Options
+                    </h4>
+                    <div className='space-y-2 text-xs text-white/70'>
+                      <p>• HD Video (no watermark)</p>
+                      <p>• MP3 Audio extraction</p>
+                      <p>• Image galleries (ZIP/Individual)</p>
+                      <p>• Preview before download</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {state.videoMetadata && (
@@ -714,21 +852,46 @@ export default function Home() {
               </div>
             )}{' '}
           </div>
-        </div>
+        </div>{' '}
         {/* Features List - Mobile only, shown at bottom */}
-        <div className='lg:hidden bg-white/5 rounded-xl p-4 mt-6'>
-          <h3 className='text-white font-semibold mb-3 text-sm md:text-base'>
+        <div className='lg:hidden bg-white/5 rounded-xl p-4 mt-6 border border-white/10'>
+          <h3 className='text-white font-semibold mb-4 text-sm md:text-base flex items-center'>
             ✨ Features
+            <div className='ml-2 w-8 h-0.5 bg-gradient-to-r from-pink-500 to-violet-500 rounded'></div>
           </h3>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-2 text-xs md:text-sm text-white/70'>
-            <p>✅ Watermark-free downloads</p>
-            <p>✅ HD quality preservation</p>
-            <p>✅ MP3 audio extraction</p>
-            <p>✅ Video preview</p>
-            <p>✅ Image gallery downloads</p>
-            <p>✅ Multiple URL formats</p>
-            <p>✅ Batch image selection</p>
-            <p>✅ Fast processing</p>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm'>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-green-400 rounded-full'></div>
+              <span>Watermark-free downloads</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-blue-400 rounded-full'></div>
+              <span>HD quality preservation</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-purple-400 rounded-full'></div>
+              <span>MP3 audio extraction</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-pink-400 rounded-full'></div>
+              <span>Video preview</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-yellow-400 rounded-full'></div>
+              <span>Image gallery downloads</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-indigo-400 rounded-full'></div>
+              <span>Multiple URL formats</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-teal-400 rounded-full'></div>
+              <span>Batch image selection</span>
+            </div>
+            <div className='flex items-center space-x-2 text-white/70'>
+              <div className='w-2 h-2 bg-orange-400 rounded-full'></div>
+              <span>Fast processing</span>
+            </div>
           </div>
         </div>
       </div>

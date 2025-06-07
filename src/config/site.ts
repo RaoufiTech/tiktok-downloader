@@ -12,11 +12,11 @@ export const siteConfig = {
   ],
   image:
     'https://pbs.twimg.com/profile_images/1446549954231738370/IVkXC16N_400x400.jpg',
-  ogImage: 'https://www.mohamedgado.site/og.jpg',
+  ogImage: 'https://www.mohamedgado.com/og.jpg',
   links: {
     twitter: 'https://twitter.com/Sadge1996',
     github: 'https://github.com/Vette1123',
-    websiteUrl: 'https://www.mohamedgado.site',
+    websiteUrl: 'https://www.mohamedgado.com',
   },
   openGraph: {
     locale: 'en_US',

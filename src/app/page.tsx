@@ -321,7 +321,7 @@ export default function Home() {
           <div className='flex justify-center items-center space-x-4'>
             {' '}
             <a
-              href='https://www.mohamedgado.site/'
+              href='https://www.mohamedgado.com/'
               target='_blank'
               rel='noopener noreferrer'
               className='group flex items-center space-x-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 border border-white/20 hover:border-white/40'

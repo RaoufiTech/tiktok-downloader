@@ -410,6 +410,21 @@ const handleProcess = async () => {
                 🎵 MP3
               </button>
             </div>{' '} */}
+            <div className='flex items-center space-x-3'>
+  <input
+    type='checkbox'
+    id='batchToggle'
+    checked={state.downloadBatch}
+    onChange={(e) =>
+      dispatch({ type: 'SET_DOWNLOAD_BATCH', payload: e.target.checked })
+    }
+    className='w-4 h-4 text-pink-500 bg-white/10 border-white/30 rounded focus:ring-pink-500 focus:ring-2'
+  />
+  <label htmlFor='batchToggle' className='text-white text-sm'>
+    Enable Batch Download
+  </label>
+</div>
+
             <button
               onClick={handleProcess}
               disabled={

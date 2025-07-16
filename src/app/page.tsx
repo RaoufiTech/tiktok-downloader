@@ -18,87 +18,71 @@ export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null)
 
 const handleProcess = async () => {
-  const rawInput = state.url.trim()
+  const rawInput = state.url.trim();
   if (!rawInput) {
-    dispatch({ type: 'SET_MESSAGE', payload: 'Please enter at least one TikTok URL' })
-    return
+    dispatch({ type: 'SET_MESSAGE', payload: 'Please enter at least one TikTok URL' });
+    return;
   }
 
-  dispatch({ type: 'SET_LOADING', payload: true })
-  dispatch({ type: 'RESET_DOWNLOAD_STATE' })
-  dispatch({ type: 'RESET_BATCH_RESULTS' })
+  dispatch({ type: 'SET_LOADING', payload: true });
+  dispatch({ type: 'RESET_DOWNLOAD_STATE' });
 
-  const urls = rawInput.split('\n').map(u => u.trim()).filter(Boolean)
+  const urls = rawInput.split('\n').map(u => u.trim()).filter(Boolean);
 
   try {
+    /* ---------- BATCH MODE ---------- */
     if (state.downloadBatch) {
       const response = await fetch('/api/batch-download', {
-        method: 'POST',
+        method : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls }),
-      })
+        body   : JSON.stringify({ urls }), // always ZIP now
+      });
 
-      const data = await response.json()
+      /* When the server responds with a ZIP we stream it straight to the user. */
+      if (response.ok && response.headers.get('content-type')?.includes('application/zip')) {
+        const blob     = await response.blob();
+        const blobUrl  = URL.createObjectURL(blob);
+        const link     = document.createElement('a');
+        link.href      = blobUrl;
+        link.download  = `tiktok-batch-${Date.now()}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
 
-      if (data.success) {
-        for (const result of data.results) {
-          if (result.success) {
-            dispatch({ type: 'ADD_BATCH_RESULT', payload: result.metadata })
-          } else {
-            console.warn(`Failed: ${result.url}`, result.error)
-          }
-        }
-
-        // Optionally clear the input field
-        dispatch({ type: 'SET_URL', payload: '' })
-      } else {
-        dispatch({
-          type: 'SET_MESSAGE',
-          payload: data.error || 'Batch download failed',
-        })
+        dispatch({ type: 'SET_MESSAGE', payload: 'Batch ZIP downloaded 🎁' });
+        dispatch({ type: 'SET_URL',     payload: '' });
+        return;
       }
-    } else {
-      // fallback to single download
-      const response = await fetch('/api/download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: rawInput,
-          type: state.downloadType,
-        }),
-      })
 
-      const data = await response.json()
-
-      if (data.success) {
-        dispatch({
-          type: 'SET_DOWNLOAD_SUCCESS',
-          payload: {
-            downloadUrl: data.downloadUrl,
-            audioUrl: data.audioUrl,
-            metadata: data.metadata,
-          },
-        })
-        dispatch({ type: 'SET_URL', payload: '' })
-      } else {
-        dispatch({
-          type: 'SET_MESSAGE',
-          payload: data.error || 'Failed to process video',
-        })
-      }
+      /* If we didn’t get a ZIP, fall back to JSON handling for debug. */
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Batch download failed');
+      dispatch({ type: 'SET_MESSAGE', payload: 'Batch processed (no ZIP?)' });
+      return;
     }
-  } catch (err) {
-    console.error('Processing error:', err)
+
+    /* ---------- SINGLE MODE (unchanged) ---------- */
+    const response = await fetch('/api/download', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ url: rawInput, type: state.downloadType }),
+    });
+
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || 'Failed to process URL');
+
     dispatch({
-      type: 'SET_MESSAGE',
-      payload: 'An error occurred while processing the request',
-    })
+      type   : 'SET_DOWNLOAD_SUCCESS',
+      payload: { downloadUrl: data.downloadUrl, audioUrl: data.audioUrl, metadata: data.metadata },
+    });
+    dispatch({ type: 'SET_URL', payload: '' });
+  } catch (err: any) {
+    dispatch({ type: 'SET_MESSAGE', payload: err?.message ?? 'Unexpected error' });
   } finally {
-    dispatch({ type: 'SET_LOADING', payload: false })
+    dispatch({ type: 'SET_LOADING', payload: false });
   }
-}
-
-
+};
 
   const handleVideoDownload = async () => {
     if (!state.downloadUrl) return

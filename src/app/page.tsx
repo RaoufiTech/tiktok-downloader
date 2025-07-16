@@ -17,23 +17,53 @@ export default function Home() {
   const [state, dispatch] = useReducer(appReducer, initialState)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const handleProcess = async () => {
-    if (!state.url.trim()) {
-      dispatch({ type: 'SET_MESSAGE', payload: 'Please enter a TikTok URL' })
-      return
-    }
+const handleProcess = async () => {
+  const rawInput = state.url.trim()
+  if (!rawInput) {
+    dispatch({ type: 'SET_MESSAGE', payload: 'Please enter at least one TikTok URL' })
+    return
+  }
 
-    dispatch({ type: 'SET_LOADING', payload: true })
-    dispatch({ type: 'RESET_DOWNLOAD_STATE' })
+  dispatch({ type: 'SET_LOADING', payload: true })
+  dispatch({ type: 'RESET_DOWNLOAD_STATE' })
+  dispatch({ type: 'RESET_BATCH_RESULTS' })
 
-    try {
+  const urls = rawInput.split('\n').map(u => u.trim()).filter(Boolean)
+
+  try {
+    if (state.downloadBatch) {
+      const response = await fetch('/api/batch-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        for (const result of data.results) {
+          if (result.success) {
+            dispatch({ type: 'ADD_BATCH_RESULT', payload: result.metadata })
+          } else {
+            console.warn(`Failed: ${result.url}`, result.error)
+          }
+        }
+
+        // Optionally clear the input field
+        dispatch({ type: 'SET_URL', payload: '' })
+      } else {
+        dispatch({
+          type: 'SET_MESSAGE',
+          payload: data.error || 'Batch download failed',
+        })
+      }
+    } else {
+      // fallback to single download
       const response = await fetch('/api/download', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: state.url,
+          url: rawInput,
           type: state.downloadType,
         }),
       })
@@ -49,39 +79,26 @@ export default function Home() {
             metadata: data.metadata,
           },
         })
-
-        // Clear the input after successful processing
         dispatch({ type: 'SET_URL', payload: '' })
-
-        // Scroll to results section after successful processing
-        setTimeout(() => {
-          if (containerRef.current) {
-            const resultsSection =
-              containerRef.current.querySelector('.results-section')
-            if (resultsSection) {
-              resultsSection.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-              })
-            }
-          }
-        }, 500)
       } else {
         dispatch({
           type: 'SET_MESSAGE',
           payload: data.error || 'Failed to process video',
         })
       }
-    } catch (err) {
-      console.error('Processing error:', err)
-      dispatch({
-        type: 'SET_MESSAGE',
-        payload: 'An error occurred while processing the video',
-      })
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false })
     }
+  } catch (err) {
+    console.error('Processing error:', err)
+    dispatch({
+      type: 'SET_MESSAGE',
+      payload: 'An error occurred while processing the request',
+    })
+  } finally {
+    dispatch({ type: 'SET_LOADING', payload: false })
   }
+}
+
+
 
   const handleVideoDownload = async () => {
     if (!state.downloadUrl) return
@@ -355,15 +372,16 @@ export default function Home() {
           {/* Input Section */}
           <div className='space-y-4 xl:col-span-1'>
             <div>
-              <input
-                type='text'
-                placeholder='Paste TikTok URL here...'
-                value={state.url}
-                onChange={(e) =>
-                  dispatch({ type: 'SET_URL', payload: e.target.value })
-                }
-                className='w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm md:text-base'
-              />
+             <textarea
+  rows={4}
+  placeholder='Paste one or more TikTok URLs (one per line)...'
+  value={state.url}
+  onChange={(e) =>
+    dispatch({ type: 'SET_URL', payload: e.target.value })
+  }
+  className='w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm md:text-base resize-y'
+/>
+
             </div>
             {/* Download Type Selection */}
             {/* <div className='flex space-x-2'>

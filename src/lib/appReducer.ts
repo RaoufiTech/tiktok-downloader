@@ -12,7 +12,6 @@ export interface VideoMetadata {
   thumbnail: string
   images?: ImageData[]
 }
-
 export interface AppState {
   url: string
   loading: boolean
@@ -27,7 +26,10 @@ export interface AppState {
   showImageGallery: boolean
   downloadType: 'video' | 'audio'
   downloadImagesAsZip: boolean
+  downloadBatch: boolean
+  batchResults: VideoMetadata[]
 }
+
 
 export type AppAction =
   | { type: 'SET_URL'; payload: string }
@@ -45,6 +47,10 @@ export type AppAction =
   | { type: 'TOGGLE_IMAGE_GALLERY' }
   | { type: 'TOGGLE_IMAGE_SELECTION'; payload: string }
   | { type: 'SELECT_ALL_IMAGES'; payload: boolean }
+  | { type: 'SET_DOWNLOAD_BATCH'; payload: boolean }
+| { type: 'ADD_BATCH_RESULT'; payload: VideoMetadata }
+| { type: 'RESET_BATCH_RESULTS' }
+
   | { type: 'RESET_DOWNLOAD_STATE' }
   | {
       type: 'SET_DOWNLOAD_SUCCESS'
@@ -69,6 +75,8 @@ export const initialState: AppState = {
   showImageGallery: false,
   downloadType: 'video',
   downloadImagesAsZip: false,
+  downloadBatch: false,
+  batchResults: [],
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -151,6 +159,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         showPreview: false,
         showImageGallery: false,
       }
+    
+    case 'SET_DOWNLOAD_BATCH':
+  return { ...state, downloadBatch: action.payload }
+
+case 'ADD_BATCH_RESULT':
+  return {
+    ...state,
+    batchResults: [...state.batchResults, action.payload],
+  }
+
+case 'RESET_BATCH_RESULTS':
+  return {
+    ...state,
+    batchResults: [],
+  }
+
 
     case 'SET_DOWNLOAD_SUCCESS':
       return {
